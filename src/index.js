@@ -80,6 +80,7 @@ async function init() {
     bot.on("sticker", msg => {
         if (msg.chat.type === "private") {
             processSticker(bot, msg, config.users);
+            console.log(msg.from.id, msg.sticker.file_unique_id)
         }
     });
 

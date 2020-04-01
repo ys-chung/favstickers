@@ -1,0 +1,30 @@
+{
+  "name": "favstickers",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "@babel/cli": "^7.8.4",
+    "@babel/core": "^7.9.0",
+    "@babel/preset-env": "^7.9.0",
+    "babel-plugin-lodash": "^3.3.4",
+    "lodash": "^4.17.15",
+    "lowdb": "^1.0.0",
+    "node-telegram-bot-api": "^0.40.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "build": "babel src --out-dir built",
+    "test": "npm run build && NODE_ENV=development node built/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alphachung/favstickers.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/alphachung/favstickers/issues"
+  },
+  "homepage": "https://github.com/alphachung/favstickers#readme"
+}

@@ -15,7 +15,8 @@
   "devDependencies": {},
   "scripts": {
     "build": "babel src --out-dir built",
-    "test": "npm run build && NODE_ENV=development node built/index.js"
+    "test": "npm run build && NODE_ENV=development node built/index.js",
+    "start": "node built/index.js"
   },
   "repository": {
     "type": "git",

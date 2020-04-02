@@ -10,6 +10,20 @@ const adapter = new FileSync("data/db.json", {
 });
 const db = low(adapter);
 
+function removeUserFromDeleteMode(userId) {
+    db.get("deleteMode")
+        .pull(userId)
+        .write();
+    log(db.get("deleteMode").value());
+}
+
+function addUserToDeleteMode(userId) {
+    db.get("deleteMode")
+        .push(userId)
+        .write();
+    log(db.get("deleteMode").value());
+}
+
 function getStickers(userId) {
     const isUserInDb = db.has(`userStickers.${userId}`).value();
     let stickers;
@@ -19,6 +33,22 @@ function getStickers(userId) {
         stickers = [];
     }
     return stickers;
+}
+
+function removeStickerFromUser(userId, stickerId, uniqueId, bot, chatId) {
+    const isIncluded = db
+        .get(`userStickers.${userId}`)
+        .find({ id: uniqueId })
+        .value();
+    if (isIncluded) {
+        db.get(`userStickers.${userId}`)
+            .pull({ id: uniqueId, sticker_file_id: stickerId, type: "sticker" })
+            .write();
+        removeUserFromDeleteMode(userId);
+        bot.sendMessage(chatId, "Sticker has been removed from your favourites, exiting delete mode.");
+    } else {
+        bot.sendMessage(chatId, "Sticker is not in your favourites, please send another sticker to delete, or type /quit to cancel.");
+    }
 }
 
 function addStickerToUser(userId, stickerId, uniqueId, bot, chatId) {
@@ -43,26 +73,41 @@ function addUserToDb(userId) {
 async function processSticker(bot, msg, users) {
     if (users.includes(msg.from.id)) {
         const isUserInDb = db.has(`userStickers.${msg.from.id}`).value();
+        const isUserInDeleteMode = db
+            .get("deleteMode")
+            .includes(msg.from.id)
+            .value();
         if (isUserInDb) {
-            log("User is in database");
-            addStickerToUser(
-                msg.from.id,
-                msg.sticker.file_id,
-                msg.sticker.file_unique_id,
-                bot,
-                msg.chat.id
-            );
+            if (!isUserInDeleteMode) {
+                addStickerToUser(
+                    msg.from.id,
+                    msg.sticker.file_id,
+                    msg.sticker.file_unique_id,
+                    bot,
+                    msg.chat.id
+                );
+            } else {
+                removeStickerFromUser(
+                    msg.from.id,
+                    msg.sticker.file_id,
+                    msg.sticker.file_unique_id,
+                    bot,
+                    msg.chat.id
+                );
+            }
         } else {
-            log("User is not in database");
             addUserToDb(msg.from.id);
-            log("User added to database");
-            addStickerToUser(
-                msg.from.id,
-                msg.sticker.file_id,
-                msg.sticker.file_unique_id,
-                bot,
-                msg.chat.id
-            );
+            if (!isUserInDeleteMode) {
+                addStickerToUser(
+                    msg.from.id,
+                    msg.sticker.file_id,
+                    msg.sticker.file_unique_id,
+                    bot,
+                    msg.chat.id
+                );
+            } else {
+                bot.sendMessage(msg.chat.id, "Sticker is not in your favourites, please send another sticker to delete, or type /quit to cancel.");
+            }
         }
     }
 }
@@ -80,7 +125,35 @@ async function init() {
     bot.on("sticker", msg => {
         if (msg.chat.type === "private") {
             processSticker(bot, msg, config.users);
-            console.log(msg.from.id, msg.sticker.file_unique_id)
+            console.log(msg.from.id, msg.sticker.file_unique_id);
+        }
+    });
+
+    bot.on("text", msg => {
+        if (msg.chat.type === "private") {
+            const isUserInDeleteMode = db
+                .get("deleteMode")
+                .includes(msg.from.id)
+                .value();
+
+            if (msg.text.startsWith("/delete")) {
+                if (!isUserInDeleteMode) {
+                    addUserToDeleteMode(msg.from.id);
+                }
+                bot.sendMessage(
+                    msg.chat.id,
+                    "Send me the sticker you want to remove, or type /quit to cancel."
+                );
+            }
+
+            if (msg.text.startsWith("/quit")) {
+                if (isUserInDeleteMode) {
+                    removeUserFromDeleteMode(msg.from.id);
+                    bot.sendMessage(msg.chat.id, "Exited delete mode.");
+                } else {
+                    bot.sendMessage(msg.chat.id, "You are not in delete mode.");
+                }
+            }
         }
     });
 

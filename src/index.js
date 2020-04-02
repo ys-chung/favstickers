@@ -42,7 +42,7 @@ function removeStickerFromUser(userId, stickerId, uniqueId, bot, chatId) {
         .value();
     if (isIncluded) {
         db.get(`userStickers.${userId}`)
-            .pull({ id: uniqueId, sticker_file_id: stickerId, type: "sticker" })
+            .remove(e => e.id === uniqueId)
             .write();
         removeUserFromDeleteMode(userId);
         bot.sendMessage(chatId, "Sticker has been removed from your favourites, exiting delete mode.");
@@ -169,7 +169,7 @@ async function init() {
 
             let replyOptions = {
                 next_offset: nextOffset,
-                cache_time: 1
+                cache_time: 5
             };
             if (allReplies.length === 0) {
                 replyOptions["switch_pm_text"] = "No stickers found!";
